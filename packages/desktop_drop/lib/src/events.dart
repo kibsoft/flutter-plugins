@@ -1,5 +1,6 @@
-import 'package:desktop_drop/src/drop_item.dart';
 import 'package:flutter/painting.dart';
+
+import 'package:desktop_drop/src/drop_item.dart';
 
 abstract class DropEvent {
   Offset location;
@@ -13,7 +14,16 @@ abstract class DropEvent {
 }
 
 class DropEnterEvent extends DropEvent {
-  DropEnterEvent({required Offset location}) : super(location);
+  final List<String>? fileNames;
+  DropEnterEvent({required Offset location, this.fileNames}) : super(location);
+
+  @override
+  String toString() {
+    if (fileNames != null) {
+      return '$runtimeType($location, fileNames: $fileNames)';
+    }
+    return super.toString();
+  }
 }
 
 class DropExitEvent extends DropEvent {
@@ -21,7 +31,16 @@ class DropExitEvent extends DropEvent {
 }
 
 class DropUpdateEvent extends DropEvent {
-  DropUpdateEvent({required Offset location}) : super(location);
+  final List<String>? fileNames;
+  DropUpdateEvent({required Offset location, this.fileNames}) : super(location);
+
+  @override
+  String toString() {
+    if (fileNames != null) {
+      return '$runtimeType($location, fileNames: $fileNames)';
+    }
+    return super.toString();
+  }
 }
 
 class DropDoneEvent extends DropEvent {

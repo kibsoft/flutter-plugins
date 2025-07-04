@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+
 import 'package:universal_platform/universal_platform.dart';
 
 import 'channel.dart';
@@ -22,11 +23,12 @@ class DropEventDetails {
   DropEventDetails({
     required this.localPosition,
     required this.globalPosition,
+    this.fileNames,
   });
 
   final Offset localPosition;
-
   final Offset globalPosition;
+  final List<String>? fileNames;
 }
 
 typedef OnDragDoneCallback = void Function(DropDoneDetails details);
@@ -115,6 +117,7 @@ class _DropTargetState extends State<DropTarget> {
     final position = renderBox.globalToLocal(globalPosition);
     bool inBounds = renderBox.paintBounds.contains(position);
     if (event is DropEnterEvent) {
+      print('DropEnterEvent file names: ${event.fileNames}');
       if (!inBounds) {
         assert(_status == _DragTargetStatus.idle);
       } else {
@@ -122,6 +125,7 @@ class _DropTargetState extends State<DropTarget> {
           _DragTargetStatus.enter,
           globalLocation: globalPosition,
           localLocation: position,
+          fileNames: event.fileNames,
         );
       }
     } else if (event is DropUpdateEvent) {
@@ -130,15 +134,16 @@ class _DropTargetState extends State<DropTarget> {
           _DragTargetStatus.enter,
           globalLocation: globalPosition,
           localLocation: position,
+          fileNames: event.fileNames,
         );
-      } else if ((_status == _DragTargetStatus.enter ||
-              _status == _DragTargetStatus.update) &&
+      } else if ((_status == _DragTargetStatus.enter || _status == _DragTargetStatus.update) &&
           inBounds) {
         _updateStatus(
           _DragTargetStatus.update,
           globalLocation: globalPosition,
           localLocation: position,
           debugRequiredStatus: false,
+          fileNames: event.fileNames,
         );
       } else if (_status != _DragTargetStatus.idle && !inBounds) {
         _updateStatus(
@@ -175,12 +180,14 @@ class _DropTargetState extends State<DropTarget> {
     bool debugRequiredStatus = true,
     required Offset localLocation,
     required Offset globalLocation,
+    List<String>? fileNames,
   }) {
     assert(!debugRequiredStatus || _status != status);
     _status = status;
     final details = DropEventDetails(
       localPosition: localLocation,
       globalPosition: globalLocation,
+      fileNames: fileNames,
     );
     switch (_status) {
       case _DragTargetStatus.enter:

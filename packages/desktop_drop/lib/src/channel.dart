@@ -1,8 +1,9 @@
 import 'dart:convert';
 
-import 'package:desktop_drop/src/drop_item.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+
+import 'package:desktop_drop/src/drop_item.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 import 'events.dart';
@@ -37,31 +38,34 @@ class DesktopDrop {
     });
   }
 
-  Future<bool> startAccessingSecurityScopedResource(
-      {required Uint8List bookmark}) async {
+  Future<bool> startAccessingSecurityScopedResource({required Uint8List bookmark}) async {
     Map<String, dynamic> resultMap = {};
     resultMap["apple-bookmark"] = bookmark;
-    final bool? result = await _channel.invokeMethod(
-        "startAccessingSecurityScopedResource", resultMap);
+    final bool? result =
+        await _channel.invokeMethod("startAccessingSecurityScopedResource", resultMap);
     if (result == null) return false;
     return result;
   }
 
-  Future<bool> stopAccessingSecurityScopedResource(
-      {required Uint8List bookmark}) async {
+  Future<bool> stopAccessingSecurityScopedResource({required Uint8List bookmark}) async {
     Map<String, dynamic> resultMap = {};
     resultMap["apple-bookmark"] = bookmark;
-    final bool result = await _channel.invokeMethod(
-        "stopAccessingSecurityScopedResource", resultMap);
+    final bool result =
+        await _channel.invokeMethod("stopAccessingSecurityScopedResource", resultMap);
     return result;
   }
 
   Future<void> _handleMethodChannel(MethodCall call) async {
     switch (call.method) {
       case "entered":
-        final position = (call.arguments as List).cast<double>();
+        final args = (call.arguments as List);
+        final position = args.take(2).cast<double>().toList();
         _offset = Offset(position[0], position[1]);
-        _notifyEvent(DropEnterEvent(location: _offset!));
+        List<String>? fileNames;
+        if (args.length > 2 && args[2] is List) {
+          fileNames = (args[2] as List).cast<String>();
+        }
+        _notifyEvent(DropEnterEvent(location: _offset!, fileNames: fileNames));
         break;
       case "updated":
         if (_offset == null && UniversalPlatform.isLinux) {
@@ -70,9 +74,14 @@ class DesktopDrop {
           _notifyEvent(DropEnterEvent(location: _offset!));
           return;
         }
-        final position = (call.arguments as List).cast<double>();
+        final args = (call.arguments as List);
+        final position = args.take(2).cast<double>().toList();
         _offset = Offset(position[0], position[1]);
-        _notifyEvent(DropUpdateEvent(location: _offset!));
+        List<String>? fileNames;
+        if (args.length > 2 && args[2] is List) {
+          fileNames = (args[2] as List).cast<String>();
+        }
+        _notifyEvent(DropUpdateEvent(location: _offset!, fileNames: fileNames));
         break;
       case "exited":
         _notifyEvent(DropExitEvent(location: _offset ?? Offset.zero));
@@ -108,8 +117,7 @@ class DesktopDrop {
       case "performOperation_linux":
         // gtk notify 'exit' before 'performOperation'.
         final text = (call.arguments as List<dynamic>)[0] as String;
-        final offset = ((call.arguments as List<dynamic>)[1] as List<dynamic>)
-            .cast<double>();
+        final offset = ((call.arguments as List<dynamic>)[1] as List<dynamic>).cast<double>();
         final paths = const LineSplitter().convert(text).map((e) {
           try {
             return Uri.tryParse(e)?.toFilePath() ?? '';

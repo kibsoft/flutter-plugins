@@ -9,6 +9,7 @@
 #include <memory>
 #include <sstream>
 #include <algorithm>
+#include <filesystem>
 
 namespace {
 
@@ -104,6 +105,8 @@ namespace {
         HWND window_handle_;
         LONG ref_count_;
         bool need_revoke_ole_initialize_;
+        // Store file names between drag events
+        std::vector<std::string> current_file_names_;
     };
 
     class DesktopDropPlugin : public flutter::Plugin {
@@ -176,31 +179,82 @@ namespace {
         }
     }
 
+    // Helper function to extract file names from IDataObject
+    std::vector<std::string> ExtractFileNamesFromDataObject(IDataObject* pDataObj) {
+        std::vector<std::string> fileNames;
+        FORMATETC fmtetc = {CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+        STGMEDIUM stgmed;
+        if (pDataObj->QueryGetData(&fmtetc) == S_OK) {
+            if (pDataObj->GetData(&fmtetc, &stgmed) == S_OK) {
+                HDROP hDrop = (HDROP)GlobalLock(stgmed.hGlobal);
+                if (hDrop) {
+                    UINT fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, nullptr, 0);
+                    for (UINT i = 0; i < fileCount; ++i) {
+                        TCHAR fileName[MAX_PATH];
+                        DragQueryFile(hDrop, i, fileName, MAX_PATH);
+#ifdef UNICODE
+                        std::wstring wide(fileName);
+                        std::string path = ws2s(wide);
+#else
+                        std::string path(fileName);
+#endif
+                        // Extract only the file name, not the full path
+                        try {
+                            std::filesystem::path fsPath(path);
+                            fileNames.push_back(fsPath.filename().string());
+                        } catch (...) {
+                            // fallback: push the whole string if something goes wrong
+                            fileNames.push_back(path);
+                        }
+                    }
+                    GlobalUnlock(stgmed.hGlobal);
+                }
+                ReleaseStgMedium(&stgmed);
+            }
+        }
+        return fileNames;
+    }
+
     HRESULT DesktopDropTarget::DragEnter(IDataObject *pDataObj, DWORD grfKeyState, POINTL pt, DWORD *pdwEffect) {
         POINT point = {pt.x, pt.y};
         ScreenToClient(window_handle_, &point);
-        channel_->InvokeMethod("entered", std::make_unique<flutter::EncodableValue>(
-                flutter::EncodableList{
-                        flutter::EncodableValue(double(point.x)),
-                        flutter::EncodableValue(double(point.y))
-                }
-        ));
+        // Extract and store file names from the data object
+        current_file_names_ = ExtractFileNamesFromDataObject(pDataObj);
+        flutter::EncodableList args;
+        args.push_back(flutter::EncodableValue(double(point.x)));
+        args.push_back(flutter::EncodableValue(double(point.y)));
+        if (!current_file_names_.empty()) {
+            flutter::EncodableList files;
+            for (const auto& name : current_file_names_) {
+                files.push_back(flutter::EncodableValue(name));
+            }
+            args.push_back(flutter::EncodableValue(files));
+        }
+        channel_->InvokeMethod("entered", std::make_unique<flutter::EncodableValue>(args));
         return 0;
     }
 
     HRESULT DesktopDropTarget::DragOver(DWORD grfKeyState, POINTL pt, DWORD *pdwEffect) {
         POINT point = {pt.x, pt.y};
         ScreenToClient(window_handle_, &point);
-        channel_->InvokeMethod("updated", std::make_unique<flutter::EncodableValue>(
-                flutter::EncodableList{
-                        flutter::EncodableValue(double(point.x)),
-                        flutter::EncodableValue(double(point.y))
-                }
-        ));
+        // Use the stored file names from DragEnter
+        flutter::EncodableList args;
+        args.push_back(flutter::EncodableValue(double(point.x)));
+        args.push_back(flutter::EncodableValue(double(point.y)));
+        if (!current_file_names_.empty()) {
+            flutter::EncodableList files;
+            for (const auto& name : current_file_names_) {
+                files.push_back(flutter::EncodableValue(name));
+            }
+            args.push_back(flutter::EncodableValue(files));
+        }
+        channel_->InvokeMethod("updated", std::make_unique<flutter::EncodableValue>(args));
         return 0;
     }
 
     HRESULT DesktopDropTarget::DragLeave() {
+        // Clear stored file names when drag leaves
+        current_file_names_.clear();
         channel_->InvokeMethod("exited", std::make_unique<flutter::EncodableValue>());
         return 0;
     }
