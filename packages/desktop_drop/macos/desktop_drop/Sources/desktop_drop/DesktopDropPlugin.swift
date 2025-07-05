@@ -86,13 +86,49 @@ class DropTarget: NSView {
     fatalError("init(coder:) has not been implemented")
   }
 
+  // Helper method to extract file names from NSDraggingInfo
+  private func extractFileNames(from sender: NSDraggingInfo) -> [String] {
+    var fileNames: [String] = []
+    
+    let searchOptions: [NSPasteboard.ReadingOptionKey: Any] = [
+      .urlReadingFileURLsOnly: true,
+    ]
+    
+    sender.enumerateDraggingItems(options: [], for: nil, classes: [NSFilePromiseReceiver.self, NSURL.self], searchOptions: searchOptions) { draggingItem, _, _ in
+      switch draggingItem.item {
+      case let fileURL as URL:
+        // For direct file URLs, extract just the filename
+        fileNames.append(fileURL.lastPathComponent)
+      default: break
+      }
+    }
+    
+    return fileNames
+  }
+
   override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-    channel.invokeMethod("entered", arguments: convertPoint(sender.draggingLocation))
+    let point = convertPoint(sender.draggingLocation)
+    let fileNames = extractFileNames(from: sender)
+    
+    var args: [Any] = [point[0], point[1]]
+    if !fileNames.isEmpty {
+      args.append(fileNames)
+    }
+    
+    channel.invokeMethod("entered", arguments: args)
     return .copy
   }
 
   override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-    channel.invokeMethod("updated", arguments: convertPoint(sender.draggingLocation))
+    let point = convertPoint(sender.draggingLocation)
+    let fileNames = extractFileNames(from: sender)
+    
+    var args: [Any] = [point[0], point[1]]
+    if !fileNames.isEmpty {
+      args.append(fileNames)
+    }
+    
+    channel.invokeMethod("updated", arguments: args)
     return .copy
   }
 

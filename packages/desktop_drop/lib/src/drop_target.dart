@@ -119,7 +119,6 @@ class _DropTargetState extends State<DropTarget> {
     final position = renderBox.globalToLocal(globalPosition);
     bool inBounds = renderBox.paintBounds.contains(position);
     if (event is DropEnterEvent) {
-      print('DropEnterEvent file names: ${event.fileNames}, mimeTypes: ${event.mimeTypes}');
       if (!inBounds) {
         assert(_status == _DragTargetStatus.idle);
       } else {
