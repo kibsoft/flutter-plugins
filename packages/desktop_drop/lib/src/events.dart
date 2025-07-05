@@ -15,12 +15,16 @@ abstract class DropEvent {
 
 class DropEnterEvent extends DropEvent {
   final List<String>? fileNames;
-  DropEnterEvent({required Offset location, this.fileNames}) : super(location);
+  final List<String>? mimeTypes;
+  DropEnterEvent({required Offset location, this.fileNames, this.mimeTypes}) : super(location);
 
   @override
   String toString() {
-    if (fileNames != null) {
-      return '$runtimeType($location, fileNames: $fileNames)';
+    final details = <String>[];
+    if (fileNames != null) details.add('fileNames: $fileNames');
+    if (mimeTypes != null) details.add('mimeTypes: $mimeTypes');
+    if (details.isNotEmpty) {
+      return ' [36m$runtimeType($location, ${details.join(', ')}) [0m';
     }
     return super.toString();
   }
@@ -32,12 +36,16 @@ class DropExitEvent extends DropEvent {
 
 class DropUpdateEvent extends DropEvent {
   final List<String>? fileNames;
-  DropUpdateEvent({required Offset location, this.fileNames}) : super(location);
+  final List<String>? mimeTypes;
+  DropUpdateEvent({required Offset location, this.fileNames, this.mimeTypes}) : super(location);
 
   @override
   String toString() {
-    if (fileNames != null) {
-      return '$runtimeType($location, fileNames: $fileNames)';
+    final details = <String>[];
+    if (fileNames != null) details.add('fileNames: $fileNames');
+    if (mimeTypes != null) details.add('mimeTypes: $mimeTypes');
+    if (details.isNotEmpty) {
+      return ' [36m$runtimeType($location, ${details.join(', ')}) [0m';
     }
     return super.toString();
   }

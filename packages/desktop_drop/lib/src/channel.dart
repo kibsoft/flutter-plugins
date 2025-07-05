@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -62,10 +63,16 @@ class DesktopDrop {
         final position = args.take(2).cast<double>().toList();
         _offset = Offset(position[0], position[1]);
         List<String>? fileNames;
+        List<String>? mimeTypes;
         if (args.length > 2 && args[2] is List) {
-          fileNames = (args[2] as List).cast<String>();
+          if (kIsWeb) {
+            mimeTypes = (args[2] as List).cast<String>();
+          } else {
+            fileNames = (args[2] as List).cast<String>();
+          }
         }
-        _notifyEvent(DropEnterEvent(location: _offset!, fileNames: fileNames));
+        _notifyEvent(
+            DropEnterEvent(location: _offset!, fileNames: fileNames, mimeTypes: mimeTypes));
         break;
       case "updated":
         if (_offset == null && UniversalPlatform.isLinux) {
@@ -78,10 +85,16 @@ class DesktopDrop {
         final position = args.take(2).cast<double>().toList();
         _offset = Offset(position[0], position[1]);
         List<String>? fileNames;
+        List<String>? mimeTypes;
         if (args.length > 2 && args[2] is List) {
-          fileNames = (args[2] as List).cast<String>();
+          if (kIsWeb) {
+            mimeTypes = (args[2] as List).cast<String>();
+          } else {
+            fileNames = (args[2] as List).cast<String>();
+          }
         }
-        _notifyEvent(DropUpdateEvent(location: _offset!, fileNames: fileNames));
+        _notifyEvent(
+            DropUpdateEvent(location: _offset!, fileNames: fileNames, mimeTypes: mimeTypes));
         break;
       case "exited":
         _notifyEvent(DropExitEvent(location: _offset ?? Offset.zero));

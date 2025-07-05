@@ -24,11 +24,13 @@ class DropEventDetails {
     required this.localPosition,
     required this.globalPosition,
     this.fileNames,
+    this.mimeTypes,
   });
 
   final Offset localPosition;
   final Offset globalPosition;
   final List<String>? fileNames;
+  final List<String>? mimeTypes;
 }
 
 typedef OnDragDoneCallback = void Function(DropDoneDetails details);
@@ -117,7 +119,7 @@ class _DropTargetState extends State<DropTarget> {
     final position = renderBox.globalToLocal(globalPosition);
     bool inBounds = renderBox.paintBounds.contains(position);
     if (event is DropEnterEvent) {
-      print('DropEnterEvent file names: ${event.fileNames}');
+      print('DropEnterEvent file names: ${event.fileNames}, mimeTypes: ${event.mimeTypes}');
       if (!inBounds) {
         assert(_status == _DragTargetStatus.idle);
       } else {
@@ -126,6 +128,7 @@ class _DropTargetState extends State<DropTarget> {
           globalLocation: globalPosition,
           localLocation: position,
           fileNames: event.fileNames,
+          mimeTypes: event.mimeTypes,
         );
       }
     } else if (event is DropUpdateEvent) {
@@ -135,6 +138,7 @@ class _DropTargetState extends State<DropTarget> {
           globalLocation: globalPosition,
           localLocation: position,
           fileNames: event.fileNames,
+          mimeTypes: event.mimeTypes,
         );
       } else if ((_status == _DragTargetStatus.enter || _status == _DragTargetStatus.update) &&
           inBounds) {
@@ -144,6 +148,7 @@ class _DropTargetState extends State<DropTarget> {
           localLocation: position,
           debugRequiredStatus: false,
           fileNames: event.fileNames,
+          mimeTypes: event.mimeTypes,
         );
       } else if (_status != _DragTargetStatus.idle && !inBounds) {
         _updateStatus(
@@ -181,6 +186,7 @@ class _DropTargetState extends State<DropTarget> {
     required Offset localLocation,
     required Offset globalLocation,
     List<String>? fileNames,
+    List<String>? mimeTypes,
   }) {
     assert(!debugRequiredStatus || _status != status);
     _status = status;
@@ -188,6 +194,7 @@ class _DropTargetState extends State<DropTarget> {
       localPosition: localLocation,
       globalPosition: globalLocation,
       fileNames: fileNames,
+      mimeTypes: mimeTypes,
     );
     switch (_status) {
       case _DragTargetStatus.enter:

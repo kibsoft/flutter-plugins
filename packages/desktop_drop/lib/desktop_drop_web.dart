@@ -1,11 +1,11 @@
 import 'dart:async';
-
-import 'package:web/web.dart' as web;
 import 'dart:js_interop';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:web/web.dart' as web;
 
 import 'src/web_drop_item.dart';
 
@@ -43,8 +43,7 @@ class DesktopDropWeb {
       final children = await Future.wait(
         entries.map((e) => _entryToWebDropItem(e)),
       )
-        ..removeWhere(
-            (element) => element.name == '.DS_Store' && element.type == '');
+        ..removeWhere((element) => element.name == '.DS_Store' && element.type == '');
 
       return WebDropItem(
         uri: web.URL.createObjectURL(web.Blob().slice(0, 0, 'directory')),
@@ -78,7 +77,23 @@ class DesktopDropWeb {
       type: file.type,
       children: [],
     );
+  }
 
+  // Helper to extract MIME types from a drag event
+  Set<String> _extractMimeTypesFromEvent(web.DragEvent event) {
+    final items = event.dataTransfer?.items;
+    final mimeTypes = <String>{};
+    if (items != null) {
+      for (var i = 0; i < items.length; i++) {
+        final item = items[i];
+        // Only add non-empty MIME types
+        if (item.type.isNotEmpty) {
+          mimeTypes.add(item.type);
+        }
+      }
+    }
+
+    return mimeTypes;
   }
 
   void _registerEvents() {
@@ -103,17 +118,25 @@ class DesktopDropWeb {
 
     web.window.ondragenter = ((web.DragEvent event) {
       event.preventDefault();
+      // Extract MIME types from dragged items
+      final mimeTypes = _extractMimeTypesFromEvent(event);
+      // Pass coordinates and MIME types as a List to the channel
       channel.invokeMethod('entered', [
         event.clientX.toDouble(),
         event.clientY.toDouble(),
+        mimeTypes.toList(),
       ]);
     }.toJS);
 
     web.window.ondragover = ((web.DragEvent event) {
       event.preventDefault();
+      // Extract MIME types from dragged items
+      final mimeTypes = _extractMimeTypesFromEvent(event);
+      // Pass coordinates and MIME types as a List to the channel
       channel.invokeMethod('updated', [
         event.clientX.toDouble(),
         event.clientY.toDouble(),
+        mimeTypes.toList(),
       ]);
     }.toJS);
 
